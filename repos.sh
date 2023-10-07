@@ -172,63 +172,53 @@ case $1 in
         else
             create_repo "$2"
         fi;;
-    "add");;
-    "remove");;
-    "checkout");;
-    "checkin");;
-    "switch");;
+    "add")
+        if [ -z "$CURRENT_REPO" ]; then
+            echo "No repository created. Please run './repos.sh create <repository_name>' to create one"
+        elif [ $# -lt 2 ]; then
+            echo "Usage: ./repos.sh add <file_name>"
+        elif [ ! -f "$2" ] && [ "$3" != "-e" ]; then
+            echo "File '$2' does not exist."
+        else
+            content=""
+            if [ "$3" != "-e" ]; then
+                content=$(cat "$2")
+            fi
+            add_file "$2" "$content"
+        fi;;
+    "remove")
+        if [ -z "$CURRENT_REPO" ]; then
+            echo "No repository created. Please run './repos.sh create <repository_name>' to create one"
+        elif [ $# -lt 2 ]; then
+            echo "Usage: ./repos.sh remove <file_name>"
+        else
+            remove_file "$2"
+        fi;;
+    "checkout")
+        if [ -z "$CURRENT_REPO" ]; then
+            echo "No repository created. Please run './repos.sh create <repository_name>' to create one"
+        elif [ $# -lt 2 ]; then
+            echo "Usage: ./repos.sh checkout <file_name>"
+        else
+            checkout_file "$2" "$3"
+        fi;;
+    "checkin")
+        if [ -z "$CURRENT_REPO" ]; then
+            echo "No repository created. Please run './repos.sh create <repository_name>' to create one"
+        elif [ $# -lt 2 ]; then
+            echo "Usage: ./repos.sh checkin <file_name>"
+        else
+            checkin_file "$2" "$3"
+        fi;;
+    "switch")
+        if [ $# -lt 2 ]; then
+            echo "Usage: ./repos.sh switch <repository_name>"
+        elif [ $# -lt 2 ]; then
+            switch_repo "$2"
+        fi;;
+    *)
+        echo "Usage: ./repos.sh <command>"
+        echo "Commands:"
+        echo "  init                Initialize the main directory for repositories"
+        echo "  create <repo_name>  Create a new repository with the specified name";;
 esac
-if [ "$1" = "create" ]; then
-    
-elif [ "$1" = "add" ]; then
-    if [ -z "$CURRENT_REPO" ]; then
-        echo "No repository created. Please run './repos.sh create <repository_name>' to create one"
-    elif [ $# -lt 2 ]; then
-        echo "Usage: ./repos.sh add <file_name>"
-    elif [ ! -f "$2" ] && [ "$3" != "-e" ]; then
-        echo "File '$2' does not exist."
-    else
-        content=""
-        if [ "$3" != "-e" ]; then
-            content=$(cat "$2")
-        fi
-        add_file "$2" "$content"
-    fi
-elif [ "$1" = "remove" ]; then
-    if [ -z "$CURRENT_REPO" ]; then
-        echo "No repository created. Please run './repos.sh create <repository_name>' to create one"
-    elif [ $# -lt 2 ]; then
-        echo "Usage: ./repos.sh remove <file_name>"
-    else
-        remove_file "$2"
-    fi
-elif [ "$1" = "checkout" ]; then
-    if [ -z "$CURRENT_REPO" ]; then
-        echo "No repository created. Please run './repos.sh create <repository_name>' to create one"
-    elif [ $# -lt 2 ]; then
-        echo "Usage: ./repos.sh checkout <file_name>"
-    else
-        checkout_file "$2" "$3"
-    fi
-elif [ "$1" = "checkin" ]; then
-    if [ -z "$CURRENT_REPO" ]; then
-        echo "No repository created. Please run './repos.sh create <repository_name>' to create one"
-    elif [ $# -lt 2 ]; then
-        echo "Usage: ./repos.sh checkin <file_name>"
-    else
-        checkin_file "$2" "$3"
-    fi
-elif [ "$1" = "switch" ]; then
-    if [ $# -lt 2 ]; then
-        echo "Usage: ./repos.sh switch <repository_name>"
-    elseif [ -z "$CURRENT_REPO" ]; then
-        echo "No repository created. Please run './repos.sh create <repository_name>' to create one"
-    elif [ $# -lt 2 ]; then
-        switch_repo "$2"
-    fi
-else
-    echo "Usage: ./repos.sh <command>"
-    echo "Commands:"
-    echo "  init                Initialize the main directory for repositories"
-    echo "  create <repo_name>  Create a new repository with the specified name"
-fi
