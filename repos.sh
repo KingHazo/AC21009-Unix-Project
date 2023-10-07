@@ -12,32 +12,15 @@ function init() {
     if [ -d "./.gib" ]; then
         echo "project folder is already initialised"
     else
-        # Create the metadata directory
+        # Create the metadata directories
         mkdir "./.gib"
+        mkdir "./.gip/logs"
+        mkdir "./.gip/locks"
+
         touch "./.gib/global.config"
         echo "project repository is initialised"
-    fi
-}
-
-function create_repo() {
-    repo_name="$1"
-    # Check if the main directory exists
-    repo_path="$GLOBAL_DIR/$repo_name"
-
-    # Check if the repository already exists
-    if [ -d "$repo_path" ]; then
-        echo "Repository '$repo_name' already exists."
-    else
-        # Create the repository directory structure
-        mkdir -p "$repo_path/.gip/logs"
-        mkdir -p "$repo_path/.gip/locks"
-        CURRENT_REPO="$repo_name"
-
-        # Store repository information in a config file
-        echo "$repo_name" > "$GLOBAL_DIR/global.config"
-        echo "Repository '$repo_name' created."
-    fi
-}
+    fi    
+}   
 
 function switch_repo() {
     repo_name="$1"
