@@ -4,26 +4,18 @@
 #copy of the file and allows the users to create project folders on the fly without having to copy this file into their 
 #project folder. For these reasons the idea of a global config file or directory sharing information on all the 
 #repositories as I assume you are implying through the implementation of the switch repo function is unnecessary
-#as we only need to see if the user is in a project folder through checking if the current ddirectory contains 
-#".gip" directory 
-
-WORK_DIR=$(pwd)
-GLOBAL_DIR=$WORK_DIR/global
-if [ -f "$GLOBAL_DIR/global.config" ]; then
-    CONFIG_FILE="$GLOBAL_DIR/global.config"
-    CURRENT_REPO=$(cat "$CONFIG_FILE")
-fi
+#as we only need to see if the user is in a project folder through checking if the current directory contains 
+#".gib" directory 
 
 function init() {
-    # Check if the main directory already exists
-    main_dir="$WORK_DIR/global"
-    if [ -d "$main_dir" ]; then
-        echo "Main directory 'global' already exists"
+    # Check if the metadata directory already exists
+    if [ -d "./.gib" ]; then
+        echo "project folder is already initialised"
     else
-        # Create the main directory
-        mkdir -p "$main_dir"
-        touch "$main_dir/global.config"
-        echo "Main directory 'global' created"
+        # Create the metadata directory
+        mkdir "./.gib"
+        touch "./.gib/global.config"
+        echo "project repository is initialised"
     fi
 }
 
