@@ -1,5 +1,12 @@
 #!/bin/bash
 
+#this file should be in a path variable directory so that it can be accessed from anywhere, only requires one
+#copy of the file and allows the users to create project folders on the fly without having to copy this file into their 
+#project folder. For these reasons the idea of a global config file or directory sharing information on all the 
+#repositories as I assume you are implying through the implementation of the switch repo function is unnecessary
+#as we only need to see if the user is in a project folder through checking if the current ddirectory contains 
+#".gip" directory 
+
 WORK_DIR=$(pwd)
 GLOBAL_DIR=$WORK_DIR/global
 if [ -f "$GLOBAL_DIR/global.config" ]; then
@@ -150,66 +157,78 @@ function checkin_file() {
 
 if [ "$1" = "init" ]; then
     init
-else
-    if ! [ -d "$GLOBAL_DIR" ]; then
-        echo "Main directory 'global' does not exist. Please run './repos.sh init' to create it"
-    else 
-        if [ "$1" = "create" ]; then
-            if [ $# -lt 2 ]; then
-                echo "Usage: ./repos.sh create <repository_name>"
-            else
-                create_repo "$2"
-            fi
-        elif [ "$1" = "add" ]; then
-            if [ -z "$CURRENT_REPO" ]; then
-                echo "No repository created. Please run './repos.sh create <repository_name>' to create one"
-            elif [ $# -lt 2 ]; then
-                echo "Usage: ./repos.sh add <file_name>"
-            elif [ ! -f "$2" ] && [ "$3" != "-e" ]; then
-                echo "File '$2' does not exist."
-            else
-                content=""
-                if [ "$3" != "-e" ]; then
-                    content=$(cat "$2")
-                fi
-                add_file "$2" "$content"
-            fi
-        elif [ "$1" = "remove" ]; then
-            if [ -z "$CURRENT_REPO" ]; then
-                echo "No repository created. Please run './repos.sh create <repository_name>' to create one"
-            elif [ $# -lt 2 ]; then
-                echo "Usage: ./repos.sh remove <file_name>"
-            else
-                remove_file "$2"
-            fi
-        elif [ "$1" = "checkout" ]; then
-            if [ -z "$CURRENT_REPO" ]; then
-                echo "No repository created. Please run './repos.sh create <repository_name>' to create one"
-            elif [ $# -lt 2 ]; then
-                echo "Usage: ./repos.sh checkout <file_name>"
-            else
-                checkout_file "$2" "$3"
-            fi
-        elif [ "$1" = "checkin" ]; then
-            if [ -z "$CURRENT_REPO" ]; then
-                echo "No repository created. Please run './repos.sh create <repository_name>' to create one"
-            elif [ $# -lt 2 ]; then
-                echo "Usage: ./repos.sh checkin <file_name>"
-            else
-                checkin_file "$2" "$3"
-            fi
-        elif [ "$1" = "switch" ]; then
-            if [ $# -lt 2 ]; then
-                echo "Usage: ./repos.sh switch <repository_name>"
-            else
-                switch_repo "$2"
-            fi
-        else
-            echo "Usage: ./repos.sh <command>"
-            echo "Commands:"
-            echo "  init                Initialize the main directory for repositories"
-            echo "  create <repo_name>  Create a new repository with the specified name"
-        fi
-    fi        
+    exit 0
 fi
 
+if ! [ -d "$GLOBAL_DIR" ]; then
+    echo "Main directory 'global' does not exist. Please run './repos.sh init' to create it"
+    exit 0;
+fi
+
+case $1 in 
+    "create")
+        if [ $# -lt 2 ]; then
+            echo "Usage: ./repos.sh create <repository_name>"
+        else
+            create_repo "$2"
+        fi;;
+    "add");;
+    "remove");;
+    "checkout");;
+    "checkin");;
+    "switch");;
+esac
+if [ "$1" = "create" ]; then
+    
+elif [ "$1" = "add" ]; then
+    if [ -z "$CURRENT_REPO" ]; then
+        echo "No repository created. Please run './repos.sh create <repository_name>' to create one"
+    elif [ $# -lt 2 ]; then
+        echo "Usage: ./repos.sh add <file_name>"
+    elif [ ! -f "$2" ] && [ "$3" != "-e" ]; then
+        echo "File '$2' does not exist."
+    else
+        content=""
+        if [ "$3" != "-e" ]; then
+            content=$(cat "$2")
+        fi
+        add_file "$2" "$content"
+    fi
+elif [ "$1" = "remove" ]; then
+    if [ -z "$CURRENT_REPO" ]; then
+        echo "No repository created. Please run './repos.sh create <repository_name>' to create one"
+    elif [ $# -lt 2 ]; then
+        echo "Usage: ./repos.sh remove <file_name>"
+    else
+        remove_file "$2"
+    fi
+elif [ "$1" = "checkout" ]; then
+    if [ -z "$CURRENT_REPO" ]; then
+        echo "No repository created. Please run './repos.sh create <repository_name>' to create one"
+    elif [ $# -lt 2 ]; then
+        echo "Usage: ./repos.sh checkout <file_name>"
+    else
+        checkout_file "$2" "$3"
+    fi
+elif [ "$1" = "checkin" ]; then
+    if [ -z "$CURRENT_REPO" ]; then
+        echo "No repository created. Please run './repos.sh create <repository_name>' to create one"
+    elif [ $# -lt 2 ]; then
+        echo "Usage: ./repos.sh checkin <file_name>"
+    else
+        checkin_file "$2" "$3"
+    fi
+elif [ "$1" = "switch" ]; then
+    if [ $# -lt 2 ]; then
+        echo "Usage: ./repos.sh switch <repository_name>"
+    elseif [ -z "$CURRENT_REPO" ]; then
+        echo "No repository created. Please run './repos.sh create <repository_name>' to create one"
+    elif [ $# -lt 2 ]; then
+        switch_repo "$2"
+    fi
+else
+    echo "Usage: ./repos.sh <command>"
+    echo "Commands:"
+    echo "  init                Initialize the main directory for repositories"
+    echo "  create <repo_name>  Create a new repository with the specified name"
+fi
