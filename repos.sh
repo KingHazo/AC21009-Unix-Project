@@ -40,6 +40,19 @@ function create_repo() {
     fi
 }
 
+function delete_repo() {
+    repo_name="$1"
+    repo_path="$GLOBAL_DIR/$repo_name"
+
+    # Check if the repository directory exists
+    if [ -d "$repo_path" ]; then
+        rm -rf "$repo_path"
+        echo "Repository '$repo_name' deleted."
+    else
+        echo "Repository '$repo_name' does not exist."
+    fi
+}
+
 function switch_repo() {
     repo_name="$1"
     repo_path="$GLOBAL_DIR/$repo_name"
@@ -49,6 +62,37 @@ function switch_repo() {
         CURRENT_REPO="$repo_name"
         echo "$repo_name" > "$GLOBAL_DIR/global.config"
         echo "Working repository set to '$repo_name'."
+        list_repo "$repo_name"
+    else
+        echo "Repository '$repo_name' does not exist."
+    fi
+}
+
+function list_repo() {
+    repo_name="$1"
+    repo_path="$GLOBAL_DIR/$repo_name"
+
+    # Check if the repository directory exists
+    if [ -d "$repo_path" ]; then
+        # List the content of the repository
+        echo "Repository '$repo_name':"
+        echo "Files:"
+        ls "$repo_path"
+    else
+        echo "Repository '$repo_name' does not exist."
+    fi
+}
+
+function list_logs() {
+    repo_name="$1"
+    repo_path="$GLOBAL_DIR/$repo_name"
+
+    # Check if the repository directory exists
+    if [ -d "$repo_path" ]; then
+        # List the content of the repository
+        echo "Repository '$repo_name':"
+        echo "Logs:"
+        ls "$repo_path/.gip/logs"
     else
         echo "Repository '$repo_name' does not exist."
     fi
@@ -88,7 +132,9 @@ function remove_file() {
 function log_file() {
     timestamp=$(date +"%Y-%m-%d %T")
     log_file=$GLOBAL_DIR/$CURRENT_REPO/.gip/logs/$timestamp.log
-    echo "$3: '$1 ($timestamp)'" >> "$log_file"
+    echo "$3: '$1'" >> "$log_file"
+    echo "User: $USER" >> "$log_file"
+    echo "Date: $timestamp" >> "$log_file"
     echo "Content: $2" >> "$log_file"
 }
 
@@ -100,7 +146,7 @@ function checkout_file() {
     else
         # Create the lock file to indicate that the file is being edited
         touch "$lock_file"
-        echo "User '$2' has checked out '$1' for editing."
+        echo "User '$USER' has checked out '$1' for editing."
     fi
 }
 
@@ -109,107 +155,92 @@ function checkin_file() {
     if [ -e "$lock_file" ]; then
         # Remove the lock file to indicate that the file is no longer being edited
         rm "$lock_file"
-        echo "User '$2' has checked in '$1' after editing"
+        echo "User '$USER' has checked in '$1' after editing"
     else
         echo "File '$1' is not being edited by user '$2'"
     fi
 }
 
-
-# function create_branch() {
-#     branch_name="$1"
-#     branch_path="$GLOBAL_DIR/$CURRENT_REPO/.gip/branches/$branch_name"
-
-#     # Check if the branch already exists
-#     if [ -d "$branch_path" ]; then
-#         echo "Branch '$branch_name' already exists."
-#     else
-#         # Create the branch directory structure
-#         mkdir -p "$branch_path/.gip"
-#         mkdir -p "$branch_path/.gip/branches"
-
-#         # Store branch information in a config file
-#         echo "$branch_name" > "$GLOBAL_DIR/$CURRENT_REPO/.gip/branches.config"
-#         echo "Branch '$branch_name' created."
-#     fi
-# }
-
-# function switch_branch() {
-#     branch_name="$1"
-#     branch_path="$GLOBAL_DIR/$CURRENT_REPO/.gip/branches/$branch_name"
-
-#     # Check if the branch directory exists
-#     if [ -d "$branch_path" ]; then
-#         CURRENT_BRANCH="$branch_name"
-#         echo "$branch_name" > "$GLOBAL_DIR/$CURRENT_REPO/.gip/branches.config"
-#         echo "Working branch set to '$branch_name'."
-#     else
-#         echo "Branch '$branch_name' does not exist."
-#     fi
-# }
-
-if [ "$1" = "init" ]; then
-    init
-else
-    if ! [ -d "$GLOBAL_DIR" ]; then
-        echo "Main directory 'global' does not exist. Please run './repos.sh init' to create it"
-    else 
-        if [ "$1" = "create" ]; then
-            if [ $# -lt 2 ]; then
-                echo "Usage: ./repos.sh create <repository_name>"
-            else
-                create_repo "$2"
-            fi
-        elif [ "$1" = "add" ]; then
-            if [ -z "$CURRENT_REPO" ]; then
-                echo "No repository created. Please run './repos.sh create <repository_name>' to create one"
-            elif [ $# -lt 2 ]; then
-                echo "Usage: ./repos.sh add <file_name>"
-            elif [ ! -f "$2" ] && [ "$3" != "-e" ]; then
-                echo "File '$2' does not exist."
-            else
-                content=""
-                if [ "$3" != "-e" ]; then
-                    content=$(cat "$2")
+function gip() {
+    if [ "$1" = "init" ]; then
+        init
+    else
+        if ! [ -d "$GLOBAL_DIR" ]; then
+            echo "Main directory 'global' does not exist. Please run './repos.sh init' to create it"
+        else 
+            if [ "$1" = "create" ]; then
+                if [ $# -lt 2 ]; then
+                    echo "Usage: ./repos.sh create <repository_name>"
+                else
+                    create_repo "$2"
                 fi
-                add_file "$2" "$content"
-            fi
-        elif [ "$1" = "remove" ]; then
-            if [ -z "$CURRENT_REPO" ]; then
-                echo "No repository created. Please run './repos.sh create <repository_name>' to create one"
-            elif [ $# -lt 2 ]; then
-                echo "Usage: ./repos.sh remove <file_name>"
+            elif [ "$1" = "delete" ]; then
+                if [ $# -lt 2 ]; then
+                    echo "Usage: ./repos.sh delete <repository_name>"
+                else
+                    delete_repo "$2"
+                fi
+            elif [ "$1" = "add" ]; then
+                if [ -z "$CURRENT_REPO" ]; then
+                    echo "No repository created. Please run './repos.sh create <repository_name>' to create one"
+                elif [ $# -lt 2 ]; then
+                    echo "Usage: ./repos.sh add <file_name>"
+                elif [ ! -f "$2" ] && [ "$3" != "-e" ]; then
+                    echo "File '$2' does not exist."
+                else
+                    content=""
+                    if [ "$3" != "-e" ]; then
+                        content=$(cat "$2")
+                    fi
+                    add_file "$2" "$content"
+                fi
+            elif [ "$1" = "remove" ]; then
+                if [ -z "$CURRENT_REPO" ]; then
+                    echo "No repository created. Please run './repos.sh create <repository_name>' to create one"
+                elif [ $# -lt 2 ]; then
+                    echo "Usage: ./repos.sh remove <file_name>"
+                else
+                    remove_file "$2"
+                fi
+            elif [ "$1" = "checkout" ]; then
+                if [ -z "$CURRENT_REPO" ]; then
+                    echo "No repository created. Please run './repos.sh create <repository_name>' to create one"
+                elif [ $# -lt 2 ]; then
+                    echo "Usage: ./repos.sh checkout <file_name>"
+                else
+                    checkout_file "$2"
+                fi
+            elif [ "$1" = "checkin" ]; then
+                if [ -z "$CURRENT_REPO" ]; then
+                    echo "No repository created. Please run './repos.sh create <repository_name>' to create one"
+                elif [ $# -lt 2 ]; then
+                    echo "Usage: ./repos.sh checkin <file_name>"
+                else
+                    checkin_file "$2"
+                fi
+            elif [ "$1" = "switch" ]; then
+                if [ $# -lt 2 ]; then
+                    echo "Usage: ./repos.sh switch <repository_name>"
+                else
+                    switch_repo "$2"
+                fi
             else
-                remove_file "$2"
+                echo "Usage: ./repos.sh <command>"
+                echo "Commands:"
+                echo "  init                Initialize the main directory for repositories"
+                echo "  create <repo_name>  Create a new repository with the specified name"
             fi
-        elif [ "$1" = "checkout" ]; then
-            if [ -z "$CURRENT_REPO" ]; then
-                echo "No repository created. Please run './repos.sh create <repository_name>' to create one"
-            elif [ $# -lt 2 ]; then
-                echo "Usage: ./repos.sh checkout <file_name>"
-            else
-                checkout_file "$2" "$3"
-            fi
-        elif [ "$1" = "checkin" ]; then
-            if [ -z "$CURRENT_REPO" ]; then
-                echo "No repository created. Please run './repos.sh create <repository_name>' to create one"
-            elif [ $# -lt 2 ]; then
-                echo "Usage: ./repos.sh checkin <file_name>"
-            else
-                checkin_file "$2" "$3"
-            fi
-        elif [ "$1" = "switch" ]; then
-            if [ $# -lt 2 ]; then
-                echo "Usage: ./repos.sh switch <repository_name>"
-            else
-                switch_repo "$2"
-            fi
-        else
-            echo "Usage: ./repos.sh <command>"
-            echo "Commands:"
-            echo "  init                Initialize the main directory for repositories"
-            echo "  create <repo_name>  Create a new repository with the specified name"
-        fi
-    fi        
-fi
+        fi        
+    fi
+}
 
+while true; do
+    read -p ">>> " input command
+    if [ "$input" = "exit" ]; then
+        break
+    elif [ "$input" = "gip" ]; then
+        gip $command
+    else
+        echo "Command not found"
+    fi
+done
