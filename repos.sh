@@ -21,6 +21,9 @@ function init() {
 	touch "./.gip/filelist"
 	touch "./.gip/fileCheckout"
         echo "project repository is initialised"
+
+	#change security permission for root directory to not allow users to alter it without using gip
+	chmod 555 ./
     fi
 }
 
@@ -58,39 +61,6 @@ function checkin_file() {
         echo "File '$1' is not being edited by user '$2'"
     fi
 }
-
-
-# function create_branch() {
-#     branch_name="$1"
-#     branch_path="$GLOBAL_DIR/$CURRENT_REPO/.gip/branches/$branch_name"
-
-#     # Check if the branch already exists
-#     if [ -d "$branch_path" ]; thsen
-#         echo "Branch '$branch_name' already exists."
-#     else
-#         # Create the branch directory structure
-#         mkdir -p "$branch_path/.gip"
-#         mkdir -p "$branch_path/.gip/branches"
-
-#         # Store branch information in a config file
-#         echo "$branch_name" > "$GLOBAL_DIR/$CURRENT_REPO/.gip/branches.config"
-#         echo "Branch '$branch_name' created."
-#     fi
-# }
-
-# function switch_branch() {
-#     branch_name="$1"
-#     branch_path="$GLOBAL_DIR/$CURRENT_REPO/.gip/branches/$branch_name"
-
-#     # Check if the branch directory exists
-#     if [ -d "$branch_path" ]; then
-#         CURRENT_BRANCH="$branch_name"
-#         echo "$branch_name" > "$GLOBAL_DIR/$CURRENT_REPO/.gip/branches.config"
-#         echo "Working branch set to '$branch_name'."
-#     else
-#         echo "Branch '$branch_name' does not exist."
-#     fi
-# }
 
 if [ "$1" = "init" ]; then
     init
