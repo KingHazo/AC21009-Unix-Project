@@ -1,11 +1,11 @@
 #!/bin/bash
 
 #this file should be in a path variable directory so that it can be accessed from anywhere, only requires one
-#copy of the file and allows the users to create project folders on the fly without having to copy this file into their 
-#project folder. For these reasons the idea of a global config file or directory sharing information on all the 
+#copy of the file and allows the users to create project folders on the fly without having to copy this file into their
+#project folder. For these reasons the idea of a global config file or directory sharing information on all the
 #repositories as I assume you are implying through the implementation of the switch repo function is unnecessary
-#as we only need to see if the user is in a project folder through checking if the current directory contains 
-#".gib" directory 
+#as we only need to see if the user is in a project folder through checking if the current directory contains
+#".gib" directory
 
 function init() {
     # Check if the metadata directory already exists
@@ -16,25 +16,17 @@ function init() {
         mkdir "./.gib"
         mkdir "./.gip/logs"
         mkdir "./.gip/locks"
+	mkdir ""
 
         touch "./.gib/global.config"
         echo "project repository is initialised"
-    fi    
-}   
-
-function switch_repo() {
-    repo_name="$1"
-    repo_path="$GLOBAL_DIR/$repo_name"
-
-    # Check if the repository directory exists
-    if [ -d "$repo_path" ]; then
-        CURRENT_REPO="$repo_name"
-        echo "$repo_name" > "$GLOBAL_DIR/global.config"
-        echo "Working repository set to '$repo_name'."
-    else
-        echo "Repository '$repo_name' does not exist."
     fi
 }
+
+#instead of adding and removing files, we'll make the project directory inaccesible through direct means
+#we'll add directories for users as workspaces and ask users the files they want to check out from the main directory
+#to work on and make non-writable for others, if they add files in their workspace we'll make the files be added directly
+#to the project directory and after they commit their changes and checkout the files
 
 function add_file() {
     file_name="$1"
