@@ -5,59 +5,29 @@
 #project folder. For these reasons the idea of a global config file or directory sharing information on all the
 #repositories as I assume you are implying through the implementation of the switch repo function is unnecessary
 #as we only need to see if the user is in a project folder through checking if the current directory contains
-#".gib" directory
+#".gip" directory
 
 function init() {
     # Check if the metadata directory already exists
-    if [ -d "./.gib" ]; then
+    if [ -d "./.gip" ]; then
         echo "project folder is already initialised"
     else
         # Create the metadata directories
-        mkdir "./.gib"
+        mkdir "./.gip"
         mkdir "./.gip/logs"
         mkdir "./.gip/locks"
-	mkdir ""
 
-        touch "./.gib/global.config"
+        touch "./.gip/global.config"
+	touch "./.gip/filelist"
+	touch "./.gip/fileCheckout"
         echo "project repository is initialised"
     fi
 }
 
 #instead of adding and removing files, we'll make the project directory inaccesible through direct means
 #we'll add directories for users as workspaces and ask users the files they want to check out from the main directory
-#to work on and make non-writable for others, if they add files in their workspace we'll make the files be added directly
-#to the project directory and after they commit their changes and checkout the files
-
-function add_file() {
-    file_name="$1"
-    content="$2"
-    file_path="$GLOBAL_DIR/$CURRENT_REPO/$file_name"
-
-    # Check if the file already exists
-    if [ -f "$file_path" ]; then
-        echo "File '$file_name' already exists."
-    else
-        # Create the file
-        touch "$file_path"
-        echo "$content" > "$file_path"
-        log_file "$file_name" "$content" "Added"
-        echo "File '$1' created."
-    fi
-}
-
-function remove_file() {
-    file_name="$1"
-    file_path="$GLOBAL_DIR/$CURRENT_REPO/$file_name"
-
-    # Check if the file exists
-    if [ -f "$file_path" ]; then
-        rm "$file_path"
-        log_file "$file_name" "" "Removed"
-        echo "File '$file_name' removed."
-    else
-        echo "File '$file_name' does not exist."
-    fi
-}
+#to work on and make non-writable for others, if they add files in their workspace we'll make the files be added automatically
+#to the project directory after they commit their changes and checkout the files
 
 function log_file() {
     timestamp=$(date +"%Y-%m-%d %T")
@@ -95,7 +65,7 @@ function checkin_file() {
 #     branch_path="$GLOBAL_DIR/$CURRENT_REPO/.gip/branches/$branch_name"
 
 #     # Check if the branch already exists
-#     if [ -d "$branch_path" ]; then
+#     if [ -d "$branch_path" ]; thsen
 #         echo "Branch '$branch_name' already exists."
 #     else
 #         # Create the branch directory structure
@@ -127,39 +97,17 @@ if [ "$1" = "init" ]; then
     exit 0
 fi
 
-if ! [ -d "$GLOBAL_DIR" ]; then
-    echo "Main directory 'global' does not exist. Please run './repos.sh init' to create it"
+if ! [ -d "./.gip" ]; then
+    echo "this is not a project root directory, move to the root directory of a project or use git init to initialise this directory"
     exit 0;
 fi
 
-case $1 in 
+case $1 in
     "create")
         if [ $# -lt 2 ]; then
             echo "Usage: ./repos.sh create <repository_name>"
         else
             create_repo "$2"
-        fi;;
-    "add")
-        if [ -z "$CURRENT_REPO" ]; then
-            echo "No repository created. Please run './repos.sh create <repository_name>' to create one"
-        elif [ $# -lt 2 ]; then
-            echo "Usage: ./repos.sh add <file_name>"
-        elif [ ! -f "$2" ] && [ "$3" != "-e" ]; then
-            echo "File '$2' does not exist."
-        else
-            content=""
-            if [ "$3" != "-e" ]; then
-                content=$(cat "$2")
-            fi
-            add_file "$2" "$content"
-        fi;;
-    "remove")
-        if [ -z "$CURRENT_REPO" ]; then
-            echo "No repository created. Please run './repos.sh create <repository_name>' to create one"
-        elif [ $# -lt 2 ]; then
-            echo "Usage: ./repos.sh remove <file_name>"
-        else
-            remove_file "$2"
         fi;;
     "checkout")
         if [ -z "$CURRENT_REPO" ]; then
