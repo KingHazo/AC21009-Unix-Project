@@ -19,7 +19,7 @@ function init() {
 
 	#create file for logging user actions
 	touch "./.gip/log"
-	log "$User created project repository"
+	log "$USER created project repository"
 
 	#create workspace area and file to keep track of changes
 	mkdir "./workspaces"
@@ -44,7 +44,7 @@ function init() {
 function log() {
     local timestamp=$(date +"%Y-%m-%d %T")
     local log_file=./.gip/log
-    echo "$(timestamp): $1" >> "$log_file"
+    echo "$timestamp: $1" >> "$log_file"
 }
 
 function checkout_file() {
@@ -57,18 +57,35 @@ function checkout_file() {
     else
         # Create the lock file to indicate that the file is being edited
         touch "$lock_file"
-        log "User '$2' has checked out '$1' for editing."
+        log "$USER has checked out '$1' for editing."
     fi
 }
 
-#essentially staging files for adding them to the shared area before using the commit command to make
-#changes take effect
+#takes a file name as input and either commits the changes you've made to said file in your directory and unlocks
+#it's usage for others or it creates a blank file in the project directory
 function checkin_file() {
-    local lock_file="$GLOBAL_DIR/$repo_name/.gip/locks/$file_name.lock"
+
+    #if file doesn't exist, create it
+    if [ ! -e $1 ]; then
+	chmod 775 ./;
+	touch $1;
+	chmod 444 $1;
+	chmod 555 ./;
+	log "$USER has checked in new file '$1'"
+	exit 0;
+    fi
+
+    #if the file does exist, you should be checking it in after making changes
+    #first we will disable the lock, and then copy the file into the main project directory to overwrite the differences
+    #and lastly create links to the file in each persons working directory to reflect the differences in other users workspaces
+    local lock_file="./.gip/locks/$1.lock"
+
     if [ -e "$lock_file" ]; then
         # Remove the lock file to indicate that the file is no longer being edited
         rm "$lock_file"
-        echo "User '$2' has checked in '$1' after editing"
+	chmod 775 ./
+	cp "./workspaces/$USER/$1" "./$1"
+        log "$USER has checked in '$1' after editing"
     else
         echo "File '$1' is not being edited by user '$2'"
     fi
@@ -80,6 +97,7 @@ if [ "$1" = "init" ]; then
 fi
 
 if ! [ -d "./.gip" ]; then
+    # what if you're in the workspace director
     echo "this is not a project root directory, move to the root directory of a project or use git init to initialise this directory"
     exit 0;
 fi
@@ -104,7 +122,7 @@ case $1 in
             checkin_file "$2"
         fi;;
     *)
-        echo "Usage: ./repos.sh <command>"
+        echo "Usage: gip <command>"
         echo "Commands:"
         echo "  init                Initialize the main directory for repositories"
         echo "  create <repo_name>  Create a new repository with the specified name";;
