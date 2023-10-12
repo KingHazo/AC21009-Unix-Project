@@ -14,9 +14,12 @@ function init() {
     else
         # Create the metadata directories
         mkdir "./.gip"
-        mkdir "./.gip/logs"
 	mkdir "./.gip/locks"
 	mkdir "./.gip/archives"
+
+	#create file for logging user actions
+	touch "./.gip/log"
+	log "$User created project repository"
 
 	#create workspace area and file to keep track of changes
 	mkdir "./workspaces"
@@ -38,11 +41,10 @@ function init() {
 #to work on and make non-writable for others, if they add files in their workspace we'll make the files be added automatically
 #to the project directory after they checkin the file and commit their changes
 
-function log_file() {
+function log() {
     timestamp=$(date +"%Y-%m-%d %T")
-    log_file=$GLOBAL_DIR/$CURRENT_REPO/.gip/logs/$timestamp.log
-    echo "$3: '$1 ($timestamp)'" >> "$log_file"
-    echo "Content: $2" >> "$log_file"
+    log_file=./.gip/log
+    echo "$(timestamp): $1" >> "$log_file"
 }
 
 function checkout_file() {
@@ -51,11 +53,11 @@ function checkout_file() {
     if [ ! -e $1 ]; then
 	echo "File does not exist in project directory, check the spelling of the file or check in a new file in your workspace and commit changes"
     elif [ -e "$lock_file" ]; then
-        echo "File '$1' is already being edited by $(ls -l .gip/locks/ | grep ".*$1\.lock$" | cut -d " " -f 3)."
+        echo "File '$1' is already being edited by $(ls -l .gip/locks/ | grep \".*$1\.lock$\" | cut -d " " -f 3)."
     else
         # Create the lock file to indicate that the file is being edited
         touch "$lock_file"
-        echo "User '$2' has checked out '$1' for editing."
+        log "User '$2' has checked out '$1' for editing."
     fi
 }
 
@@ -93,13 +95,13 @@ case $1 in
         if [ $# -lt 2 ]; then
             echo "Usage: ./repos.sh checkout <file_name>"
         else
-            checkout_file "$2" "$3"
+            checkout_file "$2"
         fi;;
     "checkin")
         if [ $# -lt 2 ]; then
             echo "Usage: ./repos.sh checkin <file_name>"
         else
-            checkin_file "$2" "$3"
+            checkin_file "$2"
         fi;;
     *)
         echo "Usage: ./repos.sh <command>"
