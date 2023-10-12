@@ -115,21 +115,15 @@ if ! [ -d "./.gip" ]; then
 fi
 
 case $1 in
-    "create")
-        if [ $# -lt 2 ]; then
-            echo "Usage: ./repos.sh create <repository_name>"
-        else
-            create_repo "$2"
-        fi;;
     "checkout")
         if [ $# -lt 2 ]; then
-            echo "Usage: ./repos.sh checkout <file_name>"
+            echo "Usage: gip checkout <file_name>"
         else
             checkout_file "$2"
         fi;;
     "checkin")
         if [ $# -lt 2 ]; then
-            echo "Usage: ./repos.sh checkin <file_name>"
+            echo "Usage: gip checkin <file_name>"
         else
             checkin_file "$2"
         fi;;
