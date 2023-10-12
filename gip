@@ -11,29 +11,29 @@ function init() {
     # Check if the metadata directory already exists
     if [ -d "./.gip" ]; then
         echo "project folder is already initialised"
-    else
-        # Create the metadata directories
-        mkdir "./.gip"
-	mkdir "./.gip/locks"
-	mkdir "./.gip/archives"
-
-	#create file for logging user actions
-	touch "./.gip/log"
-	log "$USER created project repository"
-
-	#create workspace area and file to keep track of changes
-	mkdir "./workspaces"
-	mkdir "./workspaces/$USER"
-	touch "./workspaces/$USER/stagedFiles"
-
-        touch "./.gip/global.config"
-	touch "./.gip/fileLocks"
-        echo "project repository is initialised"
-
-	#change security permission for root directory to not allow users to alter it without using gip
-	chmod 555 ./workspaces
-	chmod 555 ./
+  	exit 0;
     fi
+    # Create the metadata directories
+    mkdir "./.gip"
+    mkdir "./.gip/locks"
+    mkdir "./.gip/archives"
+
+    #create file for logging user actions
+    touch "./.gip/log"
+    log "$USER created project repository"
+
+    #create workspace area and file to keep track of changes
+    mkdir "./workspaces"
+    mkdir "./workspaces/$USER"
+    touch "./workspaces/$USER/stagedFiles"
+
+    touch "./.gip/global.config"
+    touch "./.gip/fileLocks"
+    echo "project repository is initialised"
+
+    #change security permission for root directory to not allow users to alter it without using gip
+    chmod 555 ./workspaces
+    chmod 555 ./
 }
 
 #instead of adding and removing files, we'll make the project directory inaccesible through direct means
