@@ -55,8 +55,10 @@ function checkout_file() {
     elif [ -e "$lock_file" ]; then
         echo "File '$1' is already being edited by $(ls -l .gip/locks/ | grep \".*$1\.lock$\" | cut -d " " -f 3)."
     else
-        # Create the lock file to indicate that the file is being edited
+        # Create the lock file to indicate that the file is being edited and make a copy in the users workspace
         touch "$lock_file"
+	cp $1 "./workspaces/$USER/$1"
+	chmod 774 "./workspaces/$USER/$1"
         log "$USER has checked out '$1' for editing."
     fi
 }
@@ -84,10 +86,20 @@ function checkin_file() {
         # Remove the lock file to indicate that the file is no longer being edited
         rm "$lock_file"
 	chmod 775 ./
-	cp "./workspaces/$USER/$1" "./$1"
+	# apply the new file contents to the shared directory
+	chmod 775 $1
+	mv "./workspaces/$USER/$1" "./$1"
+	chmod 444 $1
         log "$USER has checked in '$1' after editing"
+	chmod 555 ./
+	#create links of this file to each workspace directory to make
+	#reading files in workspaces and compilation in workspaces function
+	for workspace in $(ls ./workspaces)
+	do
+	    ln -s $1 "./workspaces/$workspace/$1"
+	done
     else
-        echo "File '$1' is not being edited by user '$2'"
+        echo "File '$1' is not checked out by anyone"
     fi
 }
 
