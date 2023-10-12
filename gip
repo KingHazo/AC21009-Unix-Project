@@ -15,14 +15,20 @@ function init() {
         # Create the metadata directories
         mkdir "./.gip"
         mkdir "./.gip/logs"
-        mkdir "./.gip/locks"
+	mkdir "./.gip/locks"
+	mkdir "./.gip/archives"
+
+	#create workspace area and file to keep track of changes
+	mkdir "./workspaces"
+	mkdir "./workspaces/$USER"
+	touch "./workspaces/$USER/stagedFiles"
 
         touch "./.gip/global.config"
-	touch "./.gip/filelist"
-	touch "./.gip/fileCheckout"
+	touch "./.gip/fileLocks"
         echo "project repository is initialised"
 
 	#change security permission for root directory to not allow users to alter it without using gip
+	chmod 555 ./workspaces
 	chmod 555 ./
     fi
 }
@@ -30,7 +36,7 @@ function init() {
 #instead of adding and removing files, we'll make the project directory inaccesible through direct means
 #we'll add directories for users as workspaces and ask users the files they want to check out from the main directory
 #to work on and make non-writable for others, if they add files in their workspace we'll make the files be added automatically
-#to the project directory after they commit their changes and checkout the files
+#to the project directory after they checkin the file and commit their changes
 
 function log_file() {
     timestamp=$(date +"%Y-%m-%d %T")
@@ -40,10 +46,12 @@ function log_file() {
 }
 
 function checkout_file() {
-    lock_file="$GLOBAL_DIR/$CURRENT_REPO/.gip/locks/$1.lock"
+    lock_file="./.gip/locks/$1.lock"
 
-    if [ -e "$lock_file" ]; then
-        echo "File '$1' is already being edited by another user."
+    if [ ! -e $1 ]; then
+	echo "File does not exist in project directory, check the spelling of the file or check in a new file in your workspace and commit changes"
+    elif [ -e "$lock_file" ]; then
+        echo "File '$1' is already being edited by $(ls -l .gip/locks/ | grep ".*$1\.lock$" | cut -d " " -f 3)."
     else
         # Create the lock file to indicate that the file is being edited
         touch "$lock_file"
@@ -51,6 +59,8 @@ function checkout_file() {
     fi
 }
 
+#essentially staging files for adding them to the shared area before using the commit command to make
+#changes take effect
 function checkin_file() {
     lock_file="$GLOBAL_DIR/$repo_name/.gip/locks/$file_name.lock"
     if [ -e "$lock_file" ]; then
@@ -80,26 +90,16 @@ case $1 in
             create_repo "$2"
         fi;;
     "checkout")
-        if [ -z "$CURRENT_REPO" ]; then
-            echo "No repository created. Please run './repos.sh create <repository_name>' to create one"
-        elif [ $# -lt 2 ]; then
+        if [ $# -lt 2 ]; then
             echo "Usage: ./repos.sh checkout <file_name>"
         else
             checkout_file "$2" "$3"
         fi;;
     "checkin")
-        if [ -z "$CURRENT_REPO" ]; then
-            echo "No repository created. Please run './repos.sh create <repository_name>' to create one"
-        elif [ $# -lt 2 ]; then
+        if [ $# -lt 2 ]; then
             echo "Usage: ./repos.sh checkin <file_name>"
         else
             checkin_file "$2" "$3"
-        fi;;
-    "switch")
-        if [ $# -lt 2 ]; then
-            echo "Usage: ./repos.sh switch <repository_name>"
-        elif [ $# -lt 2 ]; then
-            switch_repo "$2"
         fi;;
     *)
         echo "Usage: ./repos.sh <command>"
