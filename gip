@@ -50,7 +50,7 @@ function checkout_file() {
     if [ ! -e $1 ]; then
 	echo "File does not exist in project directory, check the spelling of the file or check in a new file in your workspace and commit changes"
     elif [ -e "$lock_file" ]; then
-	result=$(ls -l .gip/locks/ | grep ".*$1\.lock$" | cut -d " " -f 3)
+	local result=$(ls -l .gip/locks/ | grep ".*$1\.lock$" | cut -d " " -f 3)
 	echo -e "File '$1' is already being edited by $result"
     else
         # Create the lock file to indicate that the file is being edited and make a copy in the users workspace
@@ -94,9 +94,12 @@ function checkin_file() {
 	chmod 555 ./
 	#create links of this file to each workspace directory to make
 	#reading files in workspaces and compilation in workspaces function
+	#if the link already exists ignore it
 	for workspace in $(ls ./workspaces)
 	do
-	    ln -s -t "./workspaces/$workspace/" ./../../$1
+	    if [  ]; then
+		ln -s -t "./workspaces/$workspace/" ./../../$1
+	    fi
 	done
     else
         echo "File '$1' is not checked out by anyone"
@@ -104,22 +107,18 @@ function checkin_file() {
 }
 
 #while checking in a file can account for adding it, checking a file out is not able to account
-#for removing a file without several complications, making this action have a dedicated function
+#for removing a file without several complications, so deletion will have a dedicated function that
 #alleviates that difficulty by making the checks be as simple as "does the file exist?" and
 #"is the file currently checked out?"
 function remove() {
+    #if the file is currently checked out, abort
+    local lock_file="./.gip/locks/$1.lock"
 
-    return 0
-
-}
-
-
-#but what if we want to remove a directory, or better yet a directory with files,
-#doing so recursively should be possible
-function removeRecursively(){
-
-    return 0
-
+    if [ -f lock_file ]; then
+	local result=$(ls -l .gip/locks/ | grep ".*$1\.lock$" | cut -d " " -f 3)
+	echo -e "File '$1' is currently being edited by $result and thus cannot be removed"
+        return 0
+    fi
 }
 
 if [ "$1" = "init" ]; then
