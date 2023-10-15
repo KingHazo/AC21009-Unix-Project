@@ -134,7 +134,7 @@ function import() {
         cp $3 $USER
         #Alter perms in shared directory to be read only
 
-        #Link file symbolically to workspaces
+        #Link file symbolically to workspaces [Will need peer review]
         for workspace in $(ls ./workspaces)
 	    do
 	        if [  ]; then
