@@ -120,6 +120,31 @@ function remove() {
         return 0
     fi
 }
+#This may be completely atypical to the rest of the design but bear with me (I secretly do not know what I'm doing)
+#File name given as variable $3, path as $2
+function import() {
+    echo "Importing file $3 from filepath $2"
+    #If file already exists in working repository
+    if [[ -e ./workspaces/$USER/"$3" ]];
+    then
+        echo "A file of that name already exists in the current user's working repository"
+    #Check if file exists, if so, copy file to $user repository
+    elif [[ -e "$2/$3" ]]; 
+    then 
+        cp $3 $USER
+        #Alter perms in shared directory to be read only
+
+        #Link file symbolically to workspaces
+        for workspace in $(ls ./workspaces)
+	    do
+	        if [  ]; then
+		    ln -s -t "./workspaces/$workspace/" ./../../$3
+	        fi
+	    done
+    else
+        echo "The file '$3' cannot be found in the file system"
+    fi
+}
 
 if [ "$1" = "init" ]; then
     init
@@ -145,18 +170,23 @@ case $1 in
             checkin_file "$2"
         fi;;
     "import")
-	if [ $# -lt 2 ]; then
-	    echo "Usage: gip import <file_path>"
-    	fi;;
+	    if [ $# -lt 3 ]; then
+	        echo "Usage: gip import <file_path> <file_name>"
+        else
+            import "$2" "$3"
+        fi;;
     "remove")
-	if [ $# -lt 2 ]; then
-	    echo "Usage: gip remove <file_name>"
-	else
-	    remove $2
-	fi;;
+	    if [ $# -lt 2 ]; then
+	     echo "Usage: gip remove <file_name>"
+	    else
+	        remove "$2"
+	    fi;;
     *)
         echo "Usage: gip <command>"
         echo "Commands:"
-        echo "  init                Initialize the main directory for repositories"
-        echo "  create <repo_name>  Create a new repository with the specified name";;
+        echo "  init                 Initialize the main directory for repositories"
+        echo "  checkout <file_name> Checkout a file from the main directory to your workspace"
+        echo "  checkin  <file_name> Check in a file from your workspace to the main directory"
+        echo "  import   <file_path> <file_name> Import a pre-existing file to the working directory"
+        echo "  remove   <file_name> Remove a currently non-checked out file";;
 esac
