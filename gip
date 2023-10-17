@@ -35,7 +35,7 @@ function init() {
 function log() {
     local timestamp=$(date +"%Y-%m-%d %T")
     local log_file=./.gip/log
-    echo "$timestamp: $1" >> "$log_file"
+    echo -e "$timestamp: $1" >> "$log_file"
 }
 
 
