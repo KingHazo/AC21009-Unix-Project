@@ -28,7 +28,7 @@ function init() {
     echo "project repository is initialised"
 
     #change security permissions to only allow the administrator write permissions
-    chmod 755 "./git"
+    chmod 755 "./.git"
 }
 
 #takes in one parameter as input and appends it to the log file on a new line with a timestamp
