@@ -1,18 +1,17 @@
 #!/bin/bash
 
-#this file should be in a path variable directory so that it can be accessed from anywhere, only requires one
-#copy of the file and allows the users to create project folders on the fly without having to copy this file into their
-#project folder. For these reasons the idea of a global config file or directory sharing information on all the
-#repositories as I assume you are implying through the implementation of the switch repo function is unnecessary
-#as we only need to see if the user is in a project folder through checking if the current directory contains
-#".gip" directory
+#this file is designed in a manner to either be called from a PATH variable directory or by absolute path to have a user keep only one
+#copy of the file and allow the creation project folders on the fly without having to copy this file into them
 
+#in order to handle permissions in the system we will only allow the initialising user, and so the admin of the project
+#to perform actions like remove the .gip directory or load up a past archive
 function init() {
     # Check if the metadata directory already exists
     if [ -d "./.gip" ]; then
         echo "project folder is already initialised"
   	exit 0;
     fi
+
     # Create the metadata directories
     mkdir "./.gip"
     mkdir "./.gip/locks"
@@ -20,7 +19,7 @@ function init() {
 
     #create file for logging user actions
     touch "./.gip/log"
-    log "$USER created project repository"
+    log "$USER created project repository, and is now administrator of the project"
 
     #create workspace area
     mkdir "./workspaces"
@@ -28,55 +27,33 @@ function init() {
 
     echo "project repository is initialised"
 
-    #change security permission for root directory to not allow users to alter it without using gip
-    chmod 555 ./workspaces
-    chmod 555 ./
+    #change security permissions to only allow the administrator write permissions
+    chmod 755 "./git"
 }
 
-#instead of adding and removing files, we'll make the project directory inaccesible through direct means
-#we'll add directories for users as workspaces and ask users the files they want to check out from the main directory
-#to work on and make non-writable for others, if they add files in their workspace we'll make the files be added automatically
-#to the project directory after they checkin the file and commit their changes
-
+#takes in one parameter as input and appends it to the log file on a new line with a timestamp
 function log() {
     local timestamp=$(date +"%Y-%m-%d %T")
     local log_file=./.gip/log
     echo "$timestamp: $1" >> "$log_file"
 }
 
-function checkout_file() {
-    local lock_file="./.gip/locks/$1.lock"
-
-    if [ ! -e $1 ]; then
-	echo "File does not exist in project directory, check the spelling of the file or check in a new file in your workspace and commit changes"
-    elif [ -e "$lock_file" ]; then
-	local result=$(ls -l .gip/locks/ | grep ".*$1\.lock$" | cut -d " " -f 3)
-	echo -e "File '$1' is already being edited by $result"
-    else
-        # Create the lock file to indicate that the file is being edited and make a copy in the users workspace
-        touch "$lock_file"
-	rm "./workspaces/$USER/$1"
-	cp $1 "./workspaces/$USER/$1"
-	chmod 774 "./workspaces/$USER/$1"
-        log "$USER has checked out '$1' for editing."
-    fi
-}
 
 #takes a file name as input and either commits the changes you've made to said file in your directory and unlocks
 #it's usage for others or it creates a blank file in the project directory
 function checkin_file() {
 
-    #if file doesn't exist, create it
-    if [ ! -e $1 ]; then
-	chmod 775 ./;
-	touch $1;
-	chmod 444 $1;
-	chmod 555 ./;
-	log "$USER has checked in new file '$1'"
-	exit 0;
+    #if file doesn't exist, inform the user or create it if a flag has been passed to create a file
+    if [ ! -e $1  ]; then
+	if [ $2 -eq "-c" ]; then
+	    touch $1;
+	    log "$USER has checked in new file '$1'"
+	    exit 0;
+	fi
+	echo "file '$1' does not exist"
     fi
 
-    #if the file does exist, you should be checking it in after making changes
+    #check for a lock file, if it does not exist the file is not checked out and cannot be checked in
     #first we will disable the lock, and then copy the file into the main project directory to overwrite the differences
     #and lastly create links to the file in each persons working directory to reflect the differences in other users workspaces
     local lock_file="./.gip/locks/$1.lock"
@@ -84,32 +61,35 @@ function checkin_file() {
     if [ -e "$lock_file" ]; then
         # Remove the lock file to indicate that the file is no longer being edited
         rm "$lock_file"
-	chmod 775 ./
 	changes=$(diff $1 "./workspaces/$USER/$1")
-	# apply the new file contents to the shared directory
-	chmod 775 $1
 	mv "./workspaces/$USER/$1" "./$1"
-	chmod 444 $1
-        log -e "$USER has checked in '$1' after making changes:\n$changes"
-	chmod 555 ./
-	#create links of this file to each workspace directory to make
-	#reading files in workspaces and compilation in workspaces function
-	#if the link already exists ignore it
-	for workspace in $(ls ./workspaces)
-	do
-	    if [  ]; then
-		ln -s -t "./workspaces/$workspace/" ./../../$1
-	    fi
-	done
+        log "$USER has checked in '$1' after making changes:\n$changes"
+
     else
         echo "File '$1' is not checked out by anyone"
     fi
 }
 
-#while checking in a file can account for adding it, checking a file out is not able to account
-#for removing a file without several complications, so deletion will have a dedicated function that
-#alleviates that difficulty by making the checks be as simple as "does the file exist?" and
-#"is the file currently checked out?"
+#if a user needs a file for a program but does not want to check it out for editing
+#they can use gip link to have a link to the file in their workspace
+#takes a file name as input and links it to the calling user's workspace
+function link {
+	#if the file doesn't exist, cannot link to it
+	if [ ! -e $1 ]; then
+	    echo "file '$1' not found and cannot link to it"
+	    return 1;
+	fi
+
+	#if a link already exists, cannot link to it
+	if [ -h "./workspaces/$USER/$1" ]; then
+	    echo "link already exists in your workspace"
+	    return 2;
+	fi
+
+	ln "./workspaces/$USER/$1" "./../../$1"
+}
+
+#takes in one input in the form of a filename and tries to remove that file
 function remove() {
     #if the file is currently checked out, abort
     local lock_file="./.gip/locks/$1.lock"
@@ -117,30 +97,56 @@ function remove() {
     if [ -f lock_file ]; then
 	local result=$(ls -l .gip/locks/ | grep ".*$1\.lock$" | cut -d " " -f 3)
 	echo -e "File '$1' is currently being edited by $result and thus cannot be removed"
-        return 0
+        return 1;
     fi
+
+    #if the file does not exist, cannot erase if
+    if [ ! -e $1 ]; then
+	echo "file '$1' does not exist"
+    fi
+
+    rm $1
+    log "file '$1', has been removed by $USER"
 }
+
+
+function checkout_file() {
+    local lock_file="./.gip/locks/$1.lock"
+
+    #if file does not exist tell the user
+    if [ ! -e $1 ]; then
+	echo "File '$1' does not exist in project directory"
+	return 1;
+    fi
+    if [ -e "$lock_file" ]; then
+	local result=$(ls -l .gip/locks/ | grep ".*$1\.lock$" | cut -d " " -f 3)
+	echo -e "File '$1' is already being edited by $result"
+	return 2;
+    fi
+    # Create the lock file to indicate that the file is being edited and make a copy in the users workspace
+    touch "$lock_file"
+
+    #
+    if [ -h "./workspaces/$USER/$1" ]; then
+	rm "./workspaces/$USER/$1"
+    fi
+    cp $1 "./workspaces/$USER/$1"
+    log "$USER has checked out '$1' for editing."
+}
+
+
 #This may be completely atypical to the rest of the design but bear with me (I secretly do not know what I'm doing)
 #File name given as variable $3, path as $2
 function import() {
     echo "Importing file $3 from filepath $2"
     #If file already exists in working repository
-    if [[ -e ./workspaces/$USER/"$3" ]];
+    if [[ -e "$3" ]];
     then
-        echo "A file of that name already exists in the current user's working repository"
-    #Check if file exists, if so, copy file to $user repository
-    elif [[ -e "$2/$3" ]]; 
-    then 
-        cp $3 $USER
-        #Alter perms in shared directory to be read only
-
-        #Link file symbolically to workspaces [Will need peer review]
-        for workspace in $(ls ./workspaces)
-	    do
-	        if [  ]; then
-		    ln -s -t "./workspaces/$workspace/" ./../../$3
-	        fi
-	    done
+        echo "A file of that name already exists in the project directory"
+    #Check if file exists, if so, copy file to project directory
+    elif [[ -e "$2/$3" ]];
+    then
+        cp $3 ./
     else
         echo "The file '$3' cannot be found in the file system"
     fi
@@ -165,22 +171,26 @@ case $1 in
         fi;;
     "checkin")
         if [ $# -lt 2 ]; then
-            echo "Usage: gip checkin <file_name>"
+            echo "Usage: gip checkin <file_name> [-c]"
         else
             checkin_file "$2"
         fi;;
     "import")
-	    if [ $# -lt 3 ]; then
-	        echo "Usage: gip import <file_path> <file_name>"
+	if [ $# -lt 3 ]; then
+	    echo "Usage: gip import <file_path> <file_name>"
         else
             import "$2" "$3"
         fi;;
     "remove")
-	    if [ $# -lt 2 ]; then
-	     echo "Usage: gip remove <file_name>"
-	    else
-	        remove "$2"
-	    fi;;
+	if [ $# -lt 2 ]; then
+	    echo "Usage: gip remove <file_name>"
+	else
+	    remove "$2"
+	fi;;
+    "link")
+	if [ $# -lt 2 ]; then
+	    echo "Usage: gip link <file_name>"
+	fi;;
     *)
         echo "Usage: gip <command>"
         echo "Commands:"
