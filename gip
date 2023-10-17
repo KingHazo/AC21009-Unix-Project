@@ -44,13 +44,14 @@ function log() {
 function checkin_file() {
 
     #if file doesn't exist, inform the user or create it if a flag has been passed to create a file
-    if [ ! -e $1  ]; then
-	if [ $2 -eq "-c" ]; then
+    if [ ! -e $1 ]; then
+	if [ "$2" = "-c" ]; then
 	    touch $1;
 	    log "$USER has checked in new file '$1'"
 	    exit 0;
 	fi
 	echo "file '$1' does not exist"
+	exit 0;
     fi
 
     #check for a lock file, if it does not exist the file is not checked out and cannot be checked in
@@ -59,14 +60,17 @@ function checkin_file() {
     local lock_file="./.gip/locks/$1.lock"
 
     if [ -e "$lock_file" ]; then
+	if [ ! "$(cat $lock_file)" = $USER ]; then
+	    echo "file is checked out by a different user"
+        fi
         # Remove the lock file to indicate that the file is no longer being edited
         rm "$lock_file"
 	changes=$(diff $1 "./workspaces/$USER/$1")
 	mv "./workspaces/$USER/$1" "./$1"
         log "$USER has checked in '$1' after making changes:\n$changes"
-
+	exit 0;
     else
-        echo "File '$1' is not checked out by anyone"
+        echo "File '$1' is not checked out"
     fi
 }
 
@@ -94,7 +98,7 @@ function remove() {
     #if the file is currently checked out, abort
     local lock_file="./.gip/locks/$1.lock"
 
-    if [ -f lock_file ]; then
+    if [ -f $lock_file ]; then
 	local result=$(ls -l .gip/locks/ | grep ".*$1\.lock$" | cut -d " " -f 3)
 	echo -e "File '$1' is currently being edited by $result and thus cannot be removed"
         return 1;
@@ -125,6 +129,7 @@ function checkout_file() {
     fi
     # Create the lock file to indicate that the file is being edited and make a copy in the users workspace
     touch "$lock_file"
+    echo $USER > $lock_file
 
     #
     if [ -h "./workspaces/$USER/$1" ]; then
@@ -173,7 +178,7 @@ case $1 in
         if [ $# -lt 2 ]; then
             echo "Usage: gip checkin <file_name> [-c]"
         else
-            checkin_file "$2"
+            checkin_file "$2" "$3"
         fi;;
     "import")
 	if [ $# -lt 3 ]; then
