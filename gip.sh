@@ -43,12 +43,12 @@ function log() {
     local log_file="$GIP_DIR/log"
     echo -e "$timestamp: $1\n" >> "$log_file"
 }
-
+# Showcases the log file's contents
 function show_logs() {
     local log_file="$GIP_DIR/log"
     cat "$log_file"
 }
-
+#Showcases repository structure
 function show_repo() {
     local repo_name=$(basename $PWD)
     echo -e "Project repository: $repo_name"
@@ -104,7 +104,7 @@ function remove() {
         log "File '$file_name' has been removed by $USER"
     fi
 }
-
+#Identifies a file within the directory, if it exists it will create a lock file and make a copy of the file to the user's workspace
 function checkout_file() {
     local file_name="$1"
     local lock_file="$GIP_DIR/locks/$file_name.lock"
@@ -231,8 +231,7 @@ function revert() {
     echo "Project repository has been reverted to the following version: '${archive_name%.*}'"
 }
 
-#This may be completely atypical to the rest of the design but bear with me (I secretly do not know what I'm doing)
-#File name given as variable $3, path as $2
+#Imports a desired file, if given the file path to the file and the name of the file
 function import() {
     local file_path="$1"
     local file_name="$2"
@@ -249,6 +248,27 @@ function import() {
     fi
 }
 
+function help() {
+    echo "Thank you for using Gip!"
+    echo "Our commands are as follows:"
+    echo "----------------------------"
+    echo "Usage: gip <command>"
+    echo "Commands:"
+    echo "  init                 Initialize the main directory for repositories"
+    echo "  checkout <file_name> [-m <message>]  Checkout a file from the main directory to your workspace"
+    echo "  checkin  <file_name> [-c] [-m <message>] Check in a file from your workspace to the main directory"
+    echo "  import   <file_path> <file_name> Import a pre-existing file to the workspace"
+    echo "  edit     <file_name> Opens the file in Visual Studio Code"
+    echo "  remove   <file_name> [-m <message>] Remove a currently non-checked out file"
+    echo "  pull     <file_name> Pulls the most recent files in the main directory to your workspace"
+    echo "  archives             Shows the archives to the user"
+    echo "  show                 Shows the repository structure to the user"
+    echo "  logs                 Prints the contents of the log file"
+    echo "  revert   <archive_name> [-l] Reverts the changes created in workspace to most recent archive"
+    echo "  help                 Prints this text block"
+
+}
+#Statement to check initialisation
 if [ "$1" = "init" ]; then
     init
     exit 0
@@ -258,7 +278,7 @@ if ! [ -d $GIP_DIR ]; then
     echo "this is not a project root directory, move to the root directory of a project or use git init to initialise this directory"
     exit 0
 fi
-
+#Case statement to check for gip commands
 case $1 in
     "checkout")
         if [ $# -lt 2 ]; then
@@ -326,12 +346,21 @@ case $1 in
         else
             revert "$2"
         fi;;
+    "help")
+        help;;
     *)
         echo "Usage: gip <command>"
         echo "Commands:"
         echo "  init                 Initialize the main directory for repositories"
-        echo "  checkout <file_name> Checkout a file from the main directory to your workspace"
-        echo "  checkin  <file_name> Check in a file from your workspace to the main directory"
-        echo "  import   <file_path> <file_name> Import a pre-existing file to the working directory"
-        echo "  remove   <file_name> Remove a currently non-checked out file";;
+        echo "  checkout <file_name> [-m <message>]  Checkout a file from the main directory to your workspace"
+        echo "  checkin  <file_name> [-c] [-m <message>] Check in a file from your workspace to the main directory"
+        echo "  import   <file_path> <file_name> Import a pre-existing file to the workspace"
+        echo "  edit     <file_name> Opens the file in Visual Studio Code"
+        echo "  remove   <file_name> [-m <message>] Remove a currently non-checked out file"
+        echo "  pull     <file_name> Pulls the most recent files in the main directory to your workspace"
+        echo "  archives             Shows the archives to the user"
+        echo "  show                 Shows the repository structure to the user"
+        echo "  logs                 Prints the contents of the log file"
+        echo "  revert   <archive_name> [-l] Reverts the changes created in workspace to most recent archive"
+        echo "  help                 Prints this text block";;
 esac
