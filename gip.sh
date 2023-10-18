@@ -113,22 +113,22 @@ function checkout_file() {
 	    echo "File '$file_name' does not exist in project directory"
 	    return 1
     fi
-    
+
     if [ -e "$lock_file" ]; then
 	    local result=$(ls -l $GIP_DIR/locks/ | grep ".*$file_name\.lock$" | cut -d " " -f 3)
 	    echo "File '$file_name' is already being edited by $result"
 	    return 1
     fi
-    
+
     archive
     # Create the lock file to indicate that the file is being edited and make a copy in the users workspace
     touch "$lock_file"
     echo $USER > $lock_file
-    
+
     if [ -h "$WORKSPACES_DIR/$USER/$file_name" ]; then
 	    rm "$WORKSPACES_DIR/$USER/$file_name"
     fi
-    
+
     cp "$file_name" "$WORKSPACES_DIR/$USER/$file_name" 2>/dev/null
     if [ $# -eq 3 ]; then
         log "$USER has checked out '$file_name' for editing\nCommit message: '$3'"
@@ -141,7 +141,7 @@ function checkout_file() {
 #it's usage for others or it creates a blank file in the project directory
 function checkin_file() {
     local file_name="$1"
-    local newfile=$2
+    local newfile="$2"
     local message="$3"
     #if file doesn't exist, inform the user or create it if a flag has been passed to create a file
     if [ ! -e $file_name ]; then
