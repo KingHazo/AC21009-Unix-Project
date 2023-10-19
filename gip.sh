@@ -43,12 +43,12 @@ function log() {
     local log_file="$GIP_DIR/log"
     echo -e "$timestamp: $1\n" >> "$log_file"
 }
-
+# Showcases the log file's contents
 function show_logs() {
     local log_file="$GIP_DIR/log"
     cat "$log_file"
 }
-
+#Showcases repository structure
 function show_repo() {
     local repo_name=$(basename $PWD)
     echo -e "Project repository: $repo_name"
@@ -75,7 +75,9 @@ function pull() {
 	    return 1
 	fi
 
-	ln "./$file_name" "$WORKSPACES_DIR/$USER/$file_name"
+	 if ! ln "./$file_name" "$WORKSPACES_DIR/$USER/$file_name" 2>/dev/null; then
+        echo "File '$file_name' already exists in your workspace"
+    fi
 }
 
 #takes in one input in the form of a filename and tries to remove that file
@@ -104,7 +106,7 @@ function remove() {
         log "File '$file_name' has been removed by $USER"
     fi
 }
-
+#Identifies a file within the directory, if it exists it will create a lock file and make a copy of the file to the user's workspace
 function checkout_file() {
     local file_name="$1"
     local lock_file="$GIP_DIR/locks/$file_name.lock"
@@ -113,22 +115,22 @@ function checkout_file() {
 	    echo "File '$file_name' does not exist in project directory"
 	    return 1
     fi
-    
+
     if [ -e "$lock_file" ]; then
 	    local result=$(ls -l $GIP_DIR/locks/ | grep ".*$file_name\.lock$" | cut -d " " -f 3)
 	    echo "File '$file_name' is already being edited by $result"
 	    return 1
     fi
-    
+
     archive
     # Create the lock file to indicate that the file is being edited and make a copy in the users workspace
     touch "$lock_file"
     echo $USER > $lock_file
-    
+
     if [ -h "$WORKSPACES_DIR/$USER/$file_name" ]; then
 	    rm "$WORKSPACES_DIR/$USER/$file_name"
     fi
-    
+
     cp "$file_name" "$WORKSPACES_DIR/$USER/$file_name" 2>/dev/null
     if [ $# -eq 3 ]; then
         log "$USER has checked out '$file_name' for editing\nCommit message: '$3'"
@@ -141,10 +143,10 @@ function checkout_file() {
 #it's usage for others or it creates a blank file in the project directory
 function checkin_file() {
     local file_name="$1"
-    local newfile=$2
+    local newfile="$2"
     local message="$3"
     #if file doesn't exist, inform the user or create it if a flag has been passed to create a file
-    if [ ! -e $file_name ]; then
+    if [ ! -e "$file_name" ]; then
         if [ $newfile -eq 0 ]; then
             archive
             touch $file_name;
@@ -155,6 +157,20 @@ function checkin_file() {
             fi
             return 0
         fi
+
+        if [ -f "$WORKSPACES_DIR/$USER/$file_name" ]; then
+            archive
+            mv "$WORKSPACES_DIR/$USER/$file_name" "./$file_name"
+            changes=$(cat "$file_name")
+            if [[ -z "$message" ]]; then
+                log "$USER has checked in '$file_name' after making changes:\n$changes"
+            else
+                log "$USER has checked in '$file_name' after making changes:\n> $changes\nCommit message: '$message'"
+            fi
+            return 0
+        fi
+
+
         echo "File '$file_name' does not exist"
         return 0
     fi
@@ -196,9 +212,8 @@ function edit_file() {
 function archive() {
     local timestamp=$(date +"%Y-%m-%d %T")
     local archive_name="$GIP_DIR/archives/$timestamp"
-    if [ -n "$(find "$MAIN_DIR" -mindepth 1 -type f -o -mindepth 1 -type d ! -name .gip ! -name workspaces)" ]; then
-        zip -r -y "$archive_name" "$MAIN_DIR" -x "$GIP_DIR/*" -x "$WORKSPACES_DIR/*" > /dev/null
-        log "$USER has archived the project repository under the following archive name: '$archive_name.zip'"
+    if zip -r -y "$archive_name" "$MAIN_DIR" -x "$GIP_DIR/*" -x "$WORKSPACES_DIR/*" > /dev/null; then
+        log "$USER has archived the project repository under the following archive name: '$(basename "$archive_name.zip")'"
     fi
 }
 
@@ -231,8 +246,7 @@ function revert() {
     echo "Project repository has been reverted to the following version: '${archive_name%.*}'"
 }
 
-#This may be completely atypical to the rest of the design but bear with me (I secretly do not know what I'm doing)
-#File name given as variable $3, path as $2
+#Imports a desired file, if given the file path to the file and the name of the file
 function import() {
     local file_path="$1"
     local file_name="$2"
@@ -249,6 +263,27 @@ function import() {
     fi
 }
 
+function help() {
+    echo "Thank you for using Gip!"
+    echo "Our commands are as follows:"
+    echo "----------------------------"
+    echo "Usage: gip <command>"
+    echo "Commands:"
+    echo "  init                 Initialize the main directory for repositories"
+    echo "  checkout <file_name> [-m <message>]  Checkout a file from the main directory to your workspace"
+    echo "  checkin  <file_name> [-c] [-m <message>] Check in a file from your workspace to the main directory"
+    echo "  import   <file_path> <file_name> Import a pre-existing file to the workspace"
+    echo "  edit     <file_name> Opens the file in Visual Studio Code"
+    echo "  remove   <file_name> [-m <message>] Remove a currently non-checked out file"
+    echo "  pull     <file_name> Pulls the most recent files in the main directory to your workspace"
+    echo "  archives             Shows the archives to the user"
+    echo "  show                 Shows the repository structure to the user"
+    echo "  logs                 Prints the contents of the log file"
+    echo "  revert   <archive_name> [-l] Reverts the changes created in workspace to most recent archive"
+    echo "  help                 Prints this text block"
+
+}
+#Statement to check initialisation
 if [ "$1" = "init" ]; then
     init
     exit 0
@@ -258,7 +293,7 @@ if ! [ -d $GIP_DIR ]; then
     echo "this is not a project root directory, move to the root directory of a project or use git init to initialise this directory"
     exit 0
 fi
-
+#Case statement to check for gip commands
 case $1 in
     "checkout")
         if [ $# -lt 2 ]; then
@@ -326,12 +361,21 @@ case $1 in
         else
             revert "$2"
         fi;;
+    "help")
+        help;;
     *)
         echo "Usage: gip <command>"
         echo "Commands:"
         echo "  init                 Initialize the main directory for repositories"
-        echo "  checkout <file_name> Checkout a file from the main directory to your workspace"
-        echo "  checkin  <file_name> Check in a file from your workspace to the main directory"
-        echo "  import   <file_path> <file_name> Import a pre-existing file to the working directory"
-        echo "  remove   <file_name> Remove a currently non-checked out file";;
+        echo "  checkout <file_name> [-m <message>]  Checkout a file from the main directory to your workspace"
+        echo "  checkin  <file_name> [-c] [-m <message>] Check in a file from your workspace to the main directory"
+        echo "  import   <file_path> <file_name> Import a pre-existing file to the workspace"
+        echo "  edit     <file_name> Opens the file in Visual Studio Code"
+        echo "  remove   <file_name> [-m <message>] Remove a currently non-checked out file"
+        echo "  pull     <file_name> Pulls the most recent files in the main directory to your workspace"
+        echo "  archives             Shows the archives to the user"
+        echo "  show                 Shows the repository structure to the user"
+        echo "  logs                 Prints the contents of the log file"
+        echo "  revert   <archive_name> [-l] Reverts the changes created in workspace to most recent archive"
+        echo "  help                 Prints this text block";;
 esac
