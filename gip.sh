@@ -75,12 +75,29 @@ function pull() {
 	    return 1
 	fi
 
-	ln "./$file_name" "$WORKSPACES_DIR/$USER/$file_name"
+	 if ! ln "./$file_name" "$WORKSPACES_DIR/$USER/$file_name" 2>/dev/null; then
+        echo "File '$file_name' already exists in your workspace"
+    fi
+}
+
+# helper function to delete a file
+function delete_file() {
+    local file_name="$1"
+    local message="$2"
+    archive
+    rm $file_name
+    if [[ -z "$message" ]]; then
+        log "$USER has removed '$file_name'"
+    else
+        log "$USER has removed '$file_name'\nCommit message: '$message'"
+    fi
 }
 
 #takes in one input in the form of a filename and tries to remove that file
 function remove() {
     local file_name="$1"
+    local force="$2"
+    local message="$3"
     #if the file is currently checked out, abort
     local lock_file="$GIP_DIR/locks/$file_name.lock"
 
@@ -96,14 +113,17 @@ function remove() {
         return 1
     fi
 
-    archive
-    rm $file_name
-    if [ $# -eq 3 ]; then
-        log "File '$file_name' has been removed by $USER\nCommit message: '$3'"
-    else
-        log "File '$file_name' has been removed by $USER"
+    if [ $force -eq 1 ]; then
+        read -p "Are you sure you want to remove '$file_name'? (y/n) " answer
+        if [ "$answer" = "y" ]; then
+            delete_file "$file_name" "$message"
+        fi
+        return 0
     fi
+
+    delete_file "$file_name" "$message"
 }
+
 #Identifies a file within the directory, if it exists it will create a lock file and make a copy of the file to the user's workspace
 function checkout_file() {
     local file_name="$1"
@@ -144,7 +164,7 @@ function checkin_file() {
     local newfile="$2"
     local message="$3"
     #if file doesn't exist, inform the user or create it if a flag has been passed to create a file
-    if [ ! -e $file_name ]; then
+    if [ ! -e "$file_name" ]; then
         if [ $newfile -eq 0 ]; then
             archive
             touch $file_name;
@@ -155,6 +175,20 @@ function checkin_file() {
             fi
             return 0
         fi
+
+        if [ -f "$WORKSPACES_DIR/$USER/$file_name" ]; then
+            archive
+            mv "$WORKSPACES_DIR/$USER/$file_name" "./$file_name"
+            changes=$(cat "$file_name")
+            if [[ -z "$message" ]]; then
+                log "$USER has checked in '$file_name' after making changes:\n$changes"
+            else
+                log "$USER has checked in '$file_name' after making changes:\n> $changes\nCommit message: '$message'"
+            fi
+            return 0
+        fi
+
+
         echo "File '$file_name' does not exist"
         return 0
     fi
@@ -196,9 +230,8 @@ function edit_file() {
 function archive() {
     local timestamp=$(date +"%Y-%m-%d %T")
     local archive_name="$GIP_DIR/archives/$timestamp"
-    if [ -n "$(find "$MAIN_DIR" -mindepth 1 -type f -o -mindepth 1 -type d ! -name .gip ! -name workspaces)" ]; then
-        zip -r -y "$archive_name" "$MAIN_DIR" -x "$GIP_DIR/*" -x "$WORKSPACES_DIR/*" > /dev/null
-        log "$USER has archived the project repository under the following archive name: '$archive_name.zip'"
+    if zip -r -y "$archive_name" "$MAIN_DIR" -x "$GIP_DIR/*" -x "$WORKSPACES_DIR/*" > /dev/null; then
+        log "$USER has archived the project repository under the following archive name: '$(basename "$archive_name.zip")'"
     fi
 }
 
@@ -324,9 +357,27 @@ case $1 in
         fi;;
     "remove")
         if [ $# -lt 2 ]; then
-            echo "Usage: gip remove <file_name> [-m <message>]"
+            echo "Usage: gip remove <file_name> [-f] [-m <message>]"
         else
-            remove "$2" "$3" "$4"
+            file_name="$2"
+            force=1
+            message=""
+            valid=0
+            shift 2
+            while getopts "fm:" opt; do
+                case ${opt} in
+                    f )
+                        force=0 ;;
+                    m )
+                        message="${OPTARG}" ;;
+                    \? )
+                        valid=1
+                        echo "Invalid option!" >&2;;
+                esac
+            done
+            if [ $valid -eq 0 ]; then
+                remove "$file_name" "$force" "$message"
+            fi        
         fi;;
     "pull")
         if [ $# -lt 2 ]; then
@@ -356,7 +407,7 @@ case $1 in
         echo "  checkin  <file_name> [-c] [-m <message>] Check in a file from your workspace to the main directory"
         echo "  import   <file_path> <file_name> Import a pre-existing file to the workspace"
         echo "  edit     <file_name> Opens the file in Visual Studio Code"
-        echo "  remove   <file_name> [-m <message>] Remove a currently non-checked out file"
+        echo "  remove   <file_name> [-f] [-m <message>] Remove a currently non-checked out file"
         echo "  pull     <file_name> Pulls the most recent files in the main directory to your workspace"
         echo "  archives             Shows the archives to the user"
         echo "  show                 Shows the repository structure to the user"
