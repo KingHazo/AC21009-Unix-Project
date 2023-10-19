@@ -123,6 +123,7 @@ function remove() {
 
     delete_file "$file_name" "$message"
 }
+
 #Identifies a file within the directory, if it exists it will create a lock file and make a copy of the file to the user's workspace
 function checkout_file() {
     local file_name="$1"
@@ -406,7 +407,7 @@ case $1 in
         echo "  checkin  <file_name> [-c] [-m <message>] Check in a file from your workspace to the main directory"
         echo "  import   <file_path> <file_name> Import a pre-existing file to the workspace"
         echo "  edit     <file_name> Opens the file in Visual Studio Code"
-        echo "  remove   <file_name> [-m <message>] Remove a currently non-checked out file"
+        echo "  remove   <file_name> [-f] [-m <message>] Remove a currently non-checked out file"
         echo "  pull     <file_name> Pulls the most recent files in the main directory to your workspace"
         echo "  archives             Shows the archives to the user"
         echo "  show                 Shows the repository structure to the user"
