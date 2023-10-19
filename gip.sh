@@ -80,9 +80,24 @@ function pull() {
     fi
 }
 
+# helper function to delete a file
+function delete_file() {
+    local file_name="$1"
+    local message="$2"
+    archive
+    rm $file_name
+    if [[ -z "$message" ]]; then
+        log "$USER has removed '$file_name'"
+    else
+        log "$USER has removed '$file_name'\nCommit message: '$message'"
+    fi
+}
+
 #takes in one input in the form of a filename and tries to remove that file
 function remove() {
     local file_name="$1"
+    local force="$2"
+    local message="$3"
     #if the file is currently checked out, abort
     local lock_file="$GIP_DIR/locks/$file_name.lock"
 
@@ -98,13 +113,15 @@ function remove() {
         return 1
     fi
 
-    archive
-    rm $file_name
-    if [ $# -eq 3 ]; then
-        log "File '$file_name' has been removed by $USER\nCommit message: '$3'"
-    else
-        log "File '$file_name' has been removed by $USER"
+    if [ $force -eq 1 ]; then
+        read -p "Are you sure you want to remove '$file_name'? (y/n) " answer
+        if [ "$answer" = "y" ]; then
+            delete_file "$file_name" "$message"
+        fi
+        return 0
     fi
+
+    delete_file "$file_name" "$message"
 }
 #Identifies a file within the directory, if it exists it will create a lock file and make a copy of the file to the user's workspace
 function checkout_file() {
@@ -339,9 +356,27 @@ case $1 in
         fi;;
     "remove")
         if [ $# -lt 2 ]; then
-            echo "Usage: gip remove <file_name> [-m <message>]"
+            echo "Usage: gip remove <file_name> [-f] [-m <message>]"
         else
-            remove "$2" "$3" "$4"
+            file_name="$2"
+            force=1
+            message=""
+            valid=0
+            shift 2
+            while getopts "fm:" opt; do
+                case ${opt} in
+                    f )
+                        force=0 ;;
+                    m )
+                        message="${OPTARG}" ;;
+                    \? )
+                        valid=1
+                        echo "Invalid option!" >&2;;
+                esac
+            done
+            if [ $valid -eq 0 ]; then
+                remove "$file_name" "$force" "$message"
+            fi        
         fi;;
     "pull")
         if [ $# -lt 2 ]; then
