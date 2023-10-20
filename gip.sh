@@ -1,15 +1,17 @@
 #!/bin/bash
 
-#this file is designed in a manner to either be called from a PATH variable directory or by absolute path to have a user keep only one
-#copy of the file and allow the creation project folders on the fly without having to copy this file into them
+# This file is designed in a manner to either be called from a PATH variable directory 
+# or by absolute path to have a user keep only one copy of the file 
+# and allow the creation project folders on the fly without having to copy this file into them
 
-#in order to handle permissions in the system we will only allow the initialising user, and so the admin of the project
-#to perform actions like remove the .gip directory or load up a past archive
+# In order to handle permissions in the system we will only allow the initialising user, 
+# and so the admin of the project to perform actions like remove the .gip directory or load up a past archive
 
 MAIN_DIR="."
 WORKSPACES_DIR="$MAIN_DIR/workspaces"
 GIP_DIR="$MAIN_DIR/.gip"
 
+# Initialise the project directory
 function init() {
     # Check if the metadata directory already exists
     if [ -d "$GIP_DIR" ]; then
@@ -37,18 +39,20 @@ function init() {
     chmod 755 "$GIP_DIR"
 }
 
-# Takes in one parameter as input and appends it to the log file on a new line with a timestamp
+# Logs user actions with a timestamp
 function log() {
     local timestamp=$(date +"%Y-%m-%d %T")
     local log_file="$GIP_DIR/log"
     echo -e "$timestamp: $1\n" >> "$log_file"
 }
+
 # Showcases the log file's contents
 function show_logs() {
     local log_file="$GIP_DIR/log"
     cat "$log_file"
 }
-#Showcases repository structure
+
+# Showcases repository structure
 function show_repo() {
     local repo_name=$(basename $PWD)
     echo -e "Project repository: $repo_name"
@@ -58,9 +62,9 @@ function show_repo() {
     echo "---------------------"
 }
 
-#if a user needs a file for a program but does not want to check it out for editing
-#they can use gip link to have a link to the file in their workspace
-#takes a file name as input and links it to the calling user's workspace
+# If a user needs a file for a program but does not want to check it out for editing
+# they can use 'gip pull' to have a link to the file in their workspace
+# This function takes a file name as input and links it to the calling user's workspace
 function pull() {
     local file_name="$1"
 	#if the file doesn't exist, cannot link to it
@@ -80,7 +84,7 @@ function pull() {
     fi
 }
 
-# helper function to delete a file
+# Helper function to remove a file from the project directory
 function delete_file() {
     local file_name="$1"
     local message="$2"
@@ -93,21 +97,21 @@ function delete_file() {
     fi
 }
 
-#takes in one input in the form of a filename and tries to remove that file
+# Takes a file name as input and removes it from the project directory
 function remove() {
     local file_name="$1"
     local force="$2"
     local message="$3"
-    #if the file is currently checked out, abort
-    local lock_file="$GIP_DIR/locks/$file_name.lock"
 
+    # If the file is currently checked out, abort
+    local lock_file="$GIP_DIR/locks/$file_name.lock"
     if [ -f $lock_file ]; then
 	    local result=$(ls -l $GIP_DIR/locks/ | grep ".*$file_name\.lock$" | cut -d " " -f 3)
 	    echo "File '$file_name' is currently being edited by $result and thus cannot be removed"
         return 1
     fi
 
-    #if the file does not exist, cannot erase if
+    # If the file does not exist, cannot erase it
     if [ ! -e $file_name ]; then
 	    echo "File '$file_name' does not exist"
         return 1
@@ -157,13 +161,13 @@ function checkout_file() {
     fi
 }
 
-#takes a file name as input and either commits the changes you've made to said file in your directory and unlocks
-#it's usage for others or it creates a blank file in the project directory
+# Takes a file name as input and either commits the changes you've made to the given file in your directory and unlocks
+# its usage for others or it creates a blank file in the project directory
 function checkin_file() {
     local file_name="$1"
     local newfile="$2"
     local message="$3"
-    #if file doesn't exist, inform the user or create it if a flag has been passed to create a file
+    # If file doesn't exist, inform the user or create it if a flag has been passed to create a file
     if [ ! -e "$file_name" ]; then
         if [ $newfile -eq 0 ]; then
             archive
@@ -193,14 +197,15 @@ function checkin_file() {
         return 0
     fi
 
-    #check for a lock file, if it does not exist the file is not checked out and cannot be checked in
-    #first we will disable the lock, and then copy the file into the main project directory to overwrite the differences
-    #and lastly create links to the file in each persons working directory to reflect the differences in other users workspaces
+    # Check for a lock file, if it does not exist the file is not checked out and cannot be checked in
+    # First we will disable the lock, and then copy the file into the main project directory to overwrite the differences
+    # and, lastly, create links to the file in each persons working directory to reflect the differences in other users workspaces
     local lock_file="$GIP_DIR/locks/$file_name.lock"
     if [ -e "$lock_file" ]; then
 	    if [ ! "$(cat $lock_file)" = $USER ]; then
 	        echo "File is checked out by a different user"
         fi
+
         # Remove the lock file to indicate that the file is no longer being edited
         archive
         rm "$lock_file"
@@ -221,12 +226,13 @@ function edit_file() {
     local file_name="$1"
     cd "$WORKSPACES_DIR/$USER"
     if [ ! -e "$file_name" ]; then
-        echo "File '$file_name' does not exist in your workspace. Please use gip pull to pull the file from the project directory."
+        echo "File '$file_name' does not exist in your workspace. Please use 'gip checkout' to check out the file from the project directory."
         return 1
     fi
     nano "$file_name"
 }
 
+# Archive the project directory
 function archive() {
     local timestamp=$(date +"%Y-%m-%d %T")
     local archive_name="$GIP_DIR/archives/$timestamp"
@@ -235,6 +241,7 @@ function archive() {
     fi
 }
 
+# Showcases the archives to the user
 function show_archives() {
     local archives="$GIP_DIR/archives"
     cd "$archives"
@@ -245,13 +252,14 @@ function show_archives() {
 
 # Revert changes based on archived files
 function revert() {
-    # revert to latest archive
+    # Revert to the latest archive if the flag is passed
     local archive_name=""
     if [ "$1" = "-l" ]; then
         archive_name=$(ls -t "$GIP_DIR/archives" | head -n 1)
     else
         archive_name="$1"
     fi
+
     local archive_path="$GIP_DIR/archives/$archive_name"
     if [ ! -e "$archive_path" ]; then
         echo "Archive '$archive_name' does not exist"
@@ -264,15 +272,15 @@ function revert() {
     echo "Project repository has been reverted to the following version: '${archive_name%.*}'"
 }
 
-#Imports a desired file, if given the file path to the file and the name of the file
+# Imports a desired file, if given the file path to the file and the name of the file
 function import() {
     local file_path="$1"
     local file_name="$2"
     echo "Importing file $file_name from filepath $file_path"
-    #If file already exists in working repository
+    # If file already exists in working repository
     if [[ -e "$file_name" ]]; then
         echo "A file of that name already exists in the project directory"
-    #Check if file exists, if so, copy file to project directory
+    # Check if file exists, if so, copy file to project directory
     elif [[ -e "$file_path/$file_name" ]]; then
         archive
         cp $file_name ./
@@ -281,6 +289,7 @@ function import() {
     fi
 }
 
+# Help function
 function help() {
     echo "Thank you for using Gip!"
     echo "Our commands are as follows:"
@@ -301,7 +310,7 @@ function help() {
     echo "  help                 Prints this text block"
 
 }
-#Statement to check initialisation
+# Statement to check initialisation
 if [ "$1" = "init" ]; then
     init
     exit 0
@@ -311,6 +320,7 @@ if ! [ -d $GIP_DIR ]; then
     echo "this is not a project root directory, move to the root directory of a project or use git init to initialise this directory"
     exit 0
 fi
+
 #Case statement to check for gip commands
 case $1 in
     "checkout")
