@@ -128,7 +128,7 @@ function remove() {
     delete_file "$file_name" "$message"
 }
 
-# Identifies a file within the directory, if it exists it will create a lock file and make a copy of the file to the user's workspace
+#Identifies a file within the directory, if it exists it will create a lock file and make a copy of the file to the user's workspace
 function checkout_file() {
     local file_name="$1"
     local lock_file="$GIP_DIR/locks/$file_name.lock"
